@@ -1,0 +1,154 @@
+{% extends 'attendance/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">Welcome, {{ user.get_full_name|default:user.username }}!</h2>
+    
+    <!-- Today's Attendance Status -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Today's Attendance</h5>
+                </div>
+                <div class="card-body">
+                    {% if attendance %}
+                        <p><strong>Status:</strong> {{ attendance.status|title }}</p>
+                        {% if attendance.check_in %}
+                            <p><strong>Check-in:</strong> {{ attendance.check_in|date:'h:i A' }} IST</p>
+                        {% endif %}
+                        {% if attendance.check_out %}
+                            <p><strong>Check-out:</strong> {{ attendance.check_out|date:'h:i A' }} IST</p>
+                        {% endif %}
+                    {% else %}
+                        <p>No attendance recorded for today.</p>
+                    {% endif %}
+                    
+                    {% if not attendance or not attendance.check_in %}
+                        <a href="{% url 'mark_attendance' %}" class="btn btn-success">Check In</a>
+                    {% elif not attendance.check_out %}
+                        <a href="{% url 'mark_attendance' %}" class="btn btn-warning">Check Out</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alerts -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Notifications</h5>
+                </div>
+                <div class="card-body">
+                    {% if alerts %}
+                        <ul class="list-unstyled">
+                        {% for alert in alerts %}
+                            <li class="mb-2">{{ alert.message }}</li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No new notifications.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leave Requests -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">Recent Leave Requests</h5>
+                </div>
+                <div class="card-body">
+                    {% if leave_requests %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Applied On</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for leave in leave_requests %}
+                                    <tr>
+                                        <td>{{ leave.start_date }}</td>
+                                        <td>{{ leave.end_date }}</td>
+                                        <td>{{ leave.leave_type }}</td>
+                                        <td>
+                                            <span class="badge {% if leave.status == 'approved' %}bg-success{% elif leave.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                                {{ leave.status|title }}
+                                            </span>
+                                        </td>
+                                        <td>{{ leave.applied_on|date }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p>No leave requests found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if user.role in 'admin,manager' %}
+    <!-- Pending Leave Requests (for managers and admins) -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="card-title mb-0">Pending Leave Requests</h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_leaves %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Type</th>
+                                        <th>Applied On</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for leave in pending_leaves %}
+                                    <tr>
+                                        <td>{{ leave.user.get_full_name }}</td>
+                                        <td>{{ leave.start_date }}</td>
+                                        <td>{{ leave.end_date }}</td>
+                                        <td>{{ leave.leave_type }}</td>
+                                        <td>{{ leave.applied_on|date }}</td>
+                                        <td>
+                                            <form method="post" action="{% url 'manage_leaves' %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="leave_id" value="{{ leave.id }}">
+                                                <button type="submit" name="action" value="approved" class="btn btn-success btn-sm">Approve</button>
+                                                <button type="submit" name="action" value="rejected" class="btn btn-danger btn-sm">Reject</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p>No pending leave requests.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
